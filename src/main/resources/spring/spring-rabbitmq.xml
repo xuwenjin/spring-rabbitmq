@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/rabbit
+	http://www.springframework.org/schema/rabbit/spring-rabbit-1.4.xsd">
+
+	<!-- 导入公共配置 -->
+	<import resource="spring-rabbitmq-common.xml" />
+
+	<!-- direct模式 -->
+	<rabbit:template id="directRabbitTemplate"
+		connection-factory="connectionFactory" message-converter="jsonMessageConverter"
+		exchange="${rabbit.queue}.direct" />
+
+	<!--绑定队列 -->
+	<rabbit:direct-exchange name="${rabbit.queue}.direct">
+		<rabbit:bindings>
+			<rabbit:binding queue="queue.x" key="queue.key.1" />
+		</rabbit:bindings>
+	</rabbit:direct-exchange>
+
+	<!-- 自定义消息监听器-用于消费者端 -->
+	<bean id="directListener" class="com.xwj.listener.DirectMsgListener" />
+	<rabbit:listener-container
+		connection-factory="connectionFactory">
+		<rabbit:listener ref="directListener" method="onMessage"
+			queues="queue.x" />
+	</rabbit:listener-container>
+
+
+	<!-- topic模式 -->
+	<!--创建消息队列模板 -->
+	<rabbit:template id="topicRabbitTemplate"
+		connection-factory="connectionFactory" message-converter="jsonMessageConverter"
+		exchange="${rabbit.queue}.topic" />
+
+	<!--绑定队列 -->
+	<rabbit:topic-exchange name="${rabbit.queue}.topic"
+		durable="true">
+		<rabbit:bindings>
+			<rabbit:binding queue="queue.w" pattern="xwj.#" />
+		</rabbit:bindings>
+	</rabbit:topic-exchange>
+
+	<!-- 自定义消息监听器-用于消费者端 -->
+	<bean id="topicListener" class="com.xwj.listener.TopicMsgListener" />
+	<rabbit:listener-container
+		connection-factory="connectionFactory">
+		<rabbit:listener ref="topicListener" method="onMessage"
+			queues="queue.w" />
+	</rabbit:listener-container>
+
+
+	<!-- fanout模式 -->
+	<!--创建消息队列模板 -->
+	<rabbit:template id="fanoutRabbitTemplate"
+		connection-factory="connectionFactory" exchange="${rabbit.queue}.fanout"
+		message-converter="jsonMessageConverter" />
+
+	<!--绑定队列 -->
+	<rabbit:fanout-exchange name="${rabbit.queue}.fanout"
+		durable="true" auto-delete="false">
+		<rabbit:bindings>
+			<rabbit:binding queue="queue.j" />
+		</rabbit:bindings>
+	</rabbit:fanout-exchange>
+
+	<!-- 自定义消息监听器-用于消费者端 -->
+	<bean id="fanoutListener" class="com.xwj.listener.FanoutMsgListener" />
+	<rabbit:listener-container
+		connection-factory="connectionFactory" acknowledge="auto" prefetch="1">
+		<rabbit:listener ref="fanoutListener" method="onMessage"
+			queues="queue.j" />
+	</rabbit:listener-container>
+
+
+</beans>
